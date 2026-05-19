@@ -1,0 +1,118 @@
+services:
+  synapse:
+    build:
+      context: .
+      dockerfile: Dockerfile.synapse
+    container_name: synapse
+    restart: unless-stopped
+    volumes:
+      - ./synapse:/data
+    environment:
+      SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - matrix_net
+    healthcheck:
+      test: ["CMD", "curl", "-fSs", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: synapse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: STRONG_DB_PASSWORD_HERE
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - matrix_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  element:
+    image: vectorim/element-web:latest
+    container_name: element
+    restart: unless-stopped
+    volumes:
+      - ./element-config.json:/app/config.json:ro
+    networks:
+      - matrix_net
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit/livekit.yaml:/livekit.yaml:ro
+    command: --config /livekit.yaml
+    networks:
+      - matrix_net
+
+  lk-jwt-service:
+    image: ghcr.io/element-hq/lk-jwt-service:latest
+    container_name: lk-jwt-service
+    restart: unless-stopped
+    environment:
+      - LIVEKIT_URL=wss://YOUR_DOMAIN/livekit
+      - LIVEKIT_KEY=LIVEKIT_API_KEY_HERE
+      - LIVEKIT_SECRET=LIVEKIT_API_SECRET_HERE
+      - MATRIX_FEDERATION_URL=http://synapse:8008
+    networks:
+      - matrix_net
+
+  element-call:
+    image: ghcr.io/element-hq/element-call:latest
+    container_name: element-call
+    restart: unless-stopped
+    volumes:
+      - ./element-call-config.json:/app/config.json:ro
+    networks:
+      - matrix_net
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/matrix.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      synapse:
+        condition: service_healthy
+      element:
+        condition: service_started
+    networks:
+      - matrix_net
+
+volumes:
+  postgres_data:
+
+networks:
+  matrix_net:

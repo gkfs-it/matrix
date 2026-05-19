@@ -1,0 +1,71 @@
+server_name: "YOUR_DOMAIN"
+pid_file: /data/homeserver.pid
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    resources:
+      - names: [client, federation]
+        compress: false
+
+# PostgreSQL
+database:
+  name: psycopg2
+  args:
+    host: postgres
+    database: synapse
+    user: synapse
+    password: "STRONG_DB_PASSWORD_HERE"
+    cp_min: 5
+    cp_max: 10
+
+log_config: "/data/YOUR_DOMAIN.log.config"
+media_store_path: /data/media_store
+
+# Секрети — згенерувати через: python3 -c "import secrets; print(secrets.token_hex(32))"
+registration_shared_secret: "REGISTRATION_SECRET_HERE"
+macaroon_secret_key: "MACAROON_SECRET_HERE"
+form_secret: "FORM_SECRET_HERE"
+signing_key_path: "/data/YOUR_DOMAIN.signing.key"
+
+# TURN (Coturn)
+turn_uris:
+  - "turn:YOUR_DOMAIN:3478?transport=udp"
+  - "turns:YOUR_DOMAIN:5349?transport=tcp"
+turn_shared_secret: "TURN_SECRET_HERE"
+turn_user_lifetime: 86400000
+
+# Federation
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+report_stats: false
+enable_registration: false
+
+# Matrix RTC / Element Call (LiveKit)
+experimental_features:
+  msc3266_enabled: true
+
+livekit:
+  service_url: https://YOUR_DOMAIN/_livekit/jwt
+
+# LDAP / Active Directory
+modules:
+  - module: ldap_auth_provider.LdapAuthProviderModule
+    config:
+      enabled: true
+      uri:
+        - "ldap://DC1_HOSTNAME:389"
+        - "ldap://DC2_HOSTNAME:389"
+      start_tls: false
+      base: "DC=domain,DC=local"
+      attributes:
+        uid: "sAMAccountName"
+        mail: "mail"
+        name: "displayName"
+      bind_dn: "CN=ldap_read,OU=ServiceAccounts,DC=domain,DC=local"
+      bind_password: "LDAP_BIND_PASSWORD_HERE"
+
+# vim:ft=yaml

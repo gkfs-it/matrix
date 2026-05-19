@@ -1,0 +1,12 @@
+CLAUDE.md
+
+# Файли з секретами — не завантажувати в репозиторій
+synapse/hq.gkfs.com.ua.signing.key
+synapse/homeserver.yaml
+livekit/livekit.yaml
+coturn/turnserver.conf
+docker-compose.yml
+
+# Дані контейнерів
+synapse/media_store/
+postgres-data/

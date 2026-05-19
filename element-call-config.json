@@ -1,0 +1,12 @@
+{
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://hq.gkfs.com.ua",
+            "server_name": "hq.gkfs.com.ua"
+        }
+    },
+    "livekit": {
+        "livekit_service_url": "https://hq.gkfs.com.ua/_livekit/jwt"
+    },
+    "disable_guests": true
+}
