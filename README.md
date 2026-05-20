@@ -223,13 +223,15 @@ curl -s -X POST https://YOUR_DOMAIN/_matrix/client/v3/login \
 
 ## Скрипти керування
 
+Всі скрипти знаходяться в каталозі `maintenance/`:
+
 | Скрипт | Використання | Призначення |
 |---|---|---|
-| `deactivate-user.sh` | `./deactivate-user.sh <user> <token>` | Деактивація + скидання сесій |
-| `list-active-users.sh` | `./list-active-users.sh` | Активні користувачі (PostgreSQL) |
-| `list-deactivated-users.sh` | `./list-deactivated-users.sh` | Деактивовані (PostgreSQL) |
-| `list-active-users-api.sh` | `./list-active-users-api.sh <token>` | Активні через Admin API |
-| `list-deactivated-users-api.sh` | `./list-deactivated-users-api.sh <token>` | Деактивовані через Admin API |
+| `deactivate-user.sh` | `./maintenance/deactivate-user.sh <user> <token>` | Деактивація + скидання сесій |
+| `list-active-users.sh` | `./maintenance/list-active-users.sh` | Активні користувачі (PostgreSQL) |
+| `list-deactivated-users.sh` | `./maintenance/list-deactivated-users.sh` | Деактивовані (PostgreSQL) |
+| `list-active-users-api.sh` | `./maintenance/list-active-users-api.sh <token>` | Активні через Admin API |
+| `list-deactivated-users-api.sh` | `./maintenance/list-deactivated-users-api.sh <token>` | Деактивовані через Admin API |
 
 ---
 
@@ -264,11 +266,12 @@ matrix/
 ├── docker-compose.yml.example          # Шаблон docker-compose (без секретів)
 ├── element-config.json                 # Налаштування Element Web
 ├── element-call-config.json            # Налаштування Element Call
-├── deactivate-user.sh                  # Деактивація користувача
-├── list-active-users.sh                # Активні користувачі (PostgreSQL)
-├── list-deactivated-users.sh           # Деактивовані (PostgreSQL)
-├── list-active-users-api.sh            # Активні через Admin API
-├── list-deactivated-users-api.sh       # Деактивовані через Admin API
+├── maintenance/
+│   ├── deactivate-user.sh              # Деактивація користувача
+│   ├── list-active-users.sh            # Активні користувачі (PostgreSQL)
+│   ├── list-deactivated-users.sh       # Деактивовані (PostgreSQL)
+│   ├── list-active-users-api.sh        # Активні через Admin API
+│   └── list-deactivated-users-api.sh   # Деактивовані через Admin API
 ├── nginx/
 │   └── nginx.conf                      # Reverse proxy конфіг
 ├── synapse/
