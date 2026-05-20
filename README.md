@@ -15,6 +15,7 @@
 | **LiveKit** | `livekit/livekit-server:latest` | SFU для WebRTC |
 | **lk-jwt-service** | `ghcr.io/element-hq/lk-jwt-service:latest` | Токени LiveKit ↔ Matrix |
 | **Coturn** | `coturn/coturn:latest` | TURN/STUN для NAT traversal |
+| **Synapse Admin** | `ghcr.io/etkecc/synapse-admin:latest` | Веб-інтерфейс керування |
 | **nginx** | `nginx:alpine` | Reverse proxy + TLS |
 
 ---
@@ -27,6 +28,8 @@
         ▼
    nginx (443 / 8448)
    ├── /_matrix/*        → Synapse :8008
+   ├── /_synapse/*       → Synapse :8008 (Admin API)
+   ├── /admin/           → Synapse Admin :8080
    ├── /call/            → Element Call :8080
    ├── /_livekit/jwt/    → lk-jwt-service :8080
    ├── /livekit          → LiveKit :7880 (WebSocket)
@@ -55,7 +58,7 @@
 | Порт | Протокол | Призначення |
 |---|---|---|
 | `80` | TCP | HTTP → HTTPS redirect + certbot |
-| `443` | TCP | HTTPS (Matrix API, Element Web, Element Call) |
+| `443` | TCP | HTTPS (Matrix API, Element Web, Element Call, Admin) |
 | `8448` | TCP | Matrix Federation fallback |
 | `3478` | UDP | TURN/STUN (Coturn) |
 | `5349` | TCP + UDP | TURNS/STUNS (Coturn TLS) |
@@ -164,6 +167,46 @@ modules:
 
 ---
 
+## Synapse Admin
+
+Веб-інтерфейс для керування користувачами, кімнатами та сесіями.
+
+**URL:** `https://YOUR_DOMAIN/admin/`
+
+**Можливості:**
+
+| Функція | Підтримка |
+|---|---|
+| Список активних / деактивованих користувачів | ✅ |
+| Деактивація користувача + скидання сесій | ✅ |
+| Перегляд пристроїв користувача | ✅ |
+| Керування кімнатами | ✅ |
+| Статистика сервера | ✅ |
+| Керування медіафайлами | ✅ |
+
+**Вхід:**
+1. Відкрийте `https://YOUR_DOMAIN/admin/`
+2. Homeserver URL: `https://YOUR_DOMAIN`
+3. Увійдіть через логін/пароль адмін-акаунта або вставте Access Token
+
+**Призначення першого адміністратора** (через PostgreSQL):
+
+```bash
+docker exec -it synapse-postgres psql -U synapse -c \
+  "UPDATE users SET admin = 1 WHERE name = '@username:YOUR_DOMAIN';"
+```
+
+**Отримання Access Token** (через Matrix API):
+
+```bash
+curl -s -X POST https://YOUR_DOMAIN/_matrix/client/v3/login \
+  -H "Content-Type: application/json" \
+  -d '{"type":"m.login.password","user":"username","password":"password"}' \
+  | python3 -m json.tool | grep access_token
+```
+
+---
+
 ## Деактивація користувача
 
 При відключенні акаунта в AD необхідно також анулювати сесії в Synapse:
@@ -173,6 +216,20 @@ modules:
 # Приклад:
 ./deactivate-user.sh ivanov.i syt_xxxxxxxxxxxx
 ```
+
+> ⚠️ Без анулювання сесій користувач залишається підключеним на всіх пристроях до закінчення токена.
+
+---
+
+## Скрипти керування
+
+| Скрипт | Використання | Призначення |
+|---|---|---|
+| `deactivate-user.sh` | `./deactivate-user.sh <user> <token>` | Деактивація + скидання сесій |
+| `list-active-users.sh` | `./list-active-users.sh` | Активні користувачі (PostgreSQL) |
+| `list-deactivated-users.sh` | `./list-deactivated-users.sh` | Деактивовані (PostgreSQL) |
+| `list-active-users-api.sh` | `./list-active-users-api.sh <token>` | Активні через Admin API |
+| `list-deactivated-users-api.sh` | `./list-deactivated-users-api.sh <token>` | Деактивовані через Admin API |
 
 ---
 
@@ -194,7 +251,7 @@ docker compose up -d
 
 # Список користувачів (PostgreSQL)
 docker exec -it synapse-postgres psql -U synapse -c \
-  "SELECT name, admin, deactivated FROM users ORDER BY creation_ts;"
+  "SELECT name, admin, deactivated, to_timestamp(creation_ts) AS created FROM users ORDER BY creation_ts;"
 ```
 
 ---
@@ -203,24 +260,27 @@ docker exec -it synapse-postgres psql -U synapse -c \
 
 ```
 matrix/
-├── Dockerfile.synapse              # Synapse + LDAP плагін
-├── docker-compose.yml.example      # Шаблон docker-compose (без секретів)
-├── element-config.json             # Налаштування Element Web
-├── element-call-config.json        # Налаштування Element Call
-├── deactivate-user.sh              # Деактивація користувача
-├── list_users.sh                   # Список користувачів
+├── Dockerfile.synapse                  # Synapse + LDAP плагін
+├── docker-compose.yml.example          # Шаблон docker-compose (без секретів)
+├── element-config.json                 # Налаштування Element Web
+├── element-call-config.json            # Налаштування Element Call
+├── deactivate-user.sh                  # Деактивація користувача
+├── list-active-users.sh                # Активні користувачі (PostgreSQL)
+├── list-deactivated-users.sh           # Деактивовані (PostgreSQL)
+├── list-active-users-api.sh            # Активні через Admin API
+├── list-deactivated-users-api.sh       # Деактивовані через Admin API
 ├── nginx/
-│   └── nginx.conf                  # Reverse proxy конфіг
+│   └── nginx.conf                      # Reverse proxy конфіг
 ├── synapse/
-│   ├── homeserver.yaml.example     # Шаблон конфігу Synapse (без секретів)
-│   └── hq.gkfs.com.ua.log.config   # Конфіг логування
+│   ├── homeserver.yaml.example         # Шаблон конфігу Synapse (без секретів)
+│   └── hq.gkfs.com.ua.log.config       # Конфіг логування
 ├── livekit/
-│   └── livekit.yaml.example        # Шаблон конфігу LiveKit (без секретів)
+│   └── livekit.yaml.example            # Шаблон конфігу LiveKit (без секретів)
 └── coturn/
-    └── turnserver.conf.example     # Шаблон конфігу Coturn (без секретів)
+    └── turnserver.conf.example         # Шаблон конфігу Coturn (без секретів)
 ```
 
-> Файли з реальними секретами (`homeserver.yaml`, `docker-compose.yml`, `livekit.yaml`, `turnserver.conf`) додані до `.gitignore` і не зберігаються в репозиторії.
+> Файли з реальними секретами (`homeserver.yaml`, `docker-compose.yml`, `livekit.yaml`, `turnserver.conf`, `hq.gkfs.com.ua.signing.key`) додані до `.gitignore` і не зберігаються в репозиторії.
 
 ---
 

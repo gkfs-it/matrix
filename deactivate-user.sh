@@ -17,4 +17,8 @@ fi
 
 echo "Деактивуємо користувача: ${MXID}"
 
-curl -s -X POST     "${SERVER}/_synapse/admin/v1/deactivate/${MXID}"     -H "Authorization: Bearer ${ADMIN_TOKEN}"     -H "Content-Type: application/json"     -d '{"erase": false}' | python3 -m json.tool
+docker exec synapse curl -s -X POST \
+    "${SERVER}/_synapse/admin/v1/deactivate/${MXID}" \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{"erase": false}' | python3 -m json.tool --no-ensure-ascii
