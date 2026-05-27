@@ -40,6 +40,13 @@ services:
       timeout: 5s
       retries: 5
 
+  synapse-admin:
+    image: ghcr.io/etkecc/synapse-admin:latest
+    container_name: synapse-admin
+    restart: unless-stopped
+    networks:
+      - matrix_net
+
   element:
     image: vectorim/element-web:latest
     container_name: element
@@ -100,6 +107,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8448:8448"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/matrix.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro

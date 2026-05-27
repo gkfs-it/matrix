@@ -41,8 +41,18 @@ turn_user_lifetime: 86400000
 trusted_key_servers:
   - server_name: "matrix.org"
 
+# Whitelist серверів для федерації. Якщо не вказано — федерація відкрита для всіх.
+# matrix.org залишати завжди — потрібен для верифікації підписів.
+# federation_domain_whitelist:
+#   - PARTNER_SERVER_DOMAIN
+#   - matrix.org
+
 report_stats: false
 enable_registration: false
+
+# Час життя токена сесії. Після закінчення клієнт отримає 401 і запросить повторний логін.
+# Діє лише на нові токени. Розкоментувати для обмеження тривалості сесій.
+# session_lifetime: "14d"
 
 # Matrix RTC / Element Call (LiveKit)
 experimental_features:
